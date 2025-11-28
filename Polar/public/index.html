@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Polar.net Support — WebSocket Client</title>
+  <style>
+    body { font-family: system-ui, Arial; max-width: 800px; margin: 2rem auto; }
+    input, button { padding: 0.5rem; font-size: 1rem; }
+    .box { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+    .chat { height: 300px; overflow: auto; border: 1px solid #eee; padding: 0.5rem; background: #fafafa;}
+  </style>
+</head>
+<body>
+  <h1>Polar.net — Atención al Cliente (demo)</h1>
+  <p>Conéctate al namespace <code>/support</code>, únete a un canal y espera mensajes reenviados desde el endpoint HTTP.</p>
+
+  <div class="box">
+    <label>Nombre / Agente: <input id="name" placeholder="Tu nombre" /></label>
+    <br/><br/>
+    <label>Canal (ej. support-123): <input id="channel" placeholder="support-123" /></label>
+    <br/><br/>
+    <button id="connect">Conectar & Unirse</button>
+    <button id="leave">Dejar canal</button>
+  </div>
+
+  <div class="box">
+    <h3>Mensajes recibidos</h3>
+    <div id="chat" class="chat"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = null;
+    const chat = document.getElementById('chat');
+    const nameInput = document.getElementById('name');
+    const channelInput = document.getElementById('channel');
+
+    function log(msg) {
+      const d = document.createElement('div');
+      d.textContent = msg;
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    document.getElementById('connect').addEventListener('click', () => {
+      const name = nameInput.value || 'Cliente';
+      const channel = channelInput.value || 'support-123';
+      if (socket) socket.disconnect();
+
+      socket = io('/support');
+
+      socket.on('connect', () => {
+        log('[socket connected] id=' + socket.id);
+        socket.emit('join', { channel });
+      });
+
+      socket.on('joined', (d) => {
+        log('[joined] ' + JSON.stringify(d));
+      });
+
+      socket.on('message', (payload) => {
+        log('[message] ' + JSON.stringify(payload));
+      });
+
+      socket.on('disconnect', () => {
+        log('[socket disconnected]');
+      });
+
+      socket.on('error', (e) => {
+        log('[error] ' + JSON.stringify(e));
+      });
+
+      log('Connecting to /support and joining ' + channel + ' as ' + name);
+    });
+
+    document.getElementById('leave').addEventListener('click', () => {
+      const channel = channelInput.value || 'support-123';
+      if (socket) {
+        socket.emit('leave', { channel });
+        socket.disconnect();
+        log('Left and disconnected from socket.');
+        socket = null;
+      }
+    });
+  </script>
+</body>
+</html>
